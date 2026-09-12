@@ -37,12 +37,6 @@ resource "aws_apigatewayv2_route" "proxy" {
 # Rotas publicas da aplicacao (permitAll no SecurityConfiguration.java) -- precisam
 # ficar fora do authorizer, senao o proxy curinga acima as engoliria e ninguem
 # consegue nem logar.
-#
-# "/mechanical-hub/service-orders/**" NAO entra aqui de proposito: hoje esta
-# permitAll() na aplicacao (nao existia autenticacao de cliente ainda), mas com a
-# Lambda de CPF deve passar a exigir o JWT do cliente -- cai no ANY /{proxy+}
-# protegido pelo authorizer. Pendente ajuste correspondente no SecurityConfiguration
-# da aplicacao (proxima atividade).
 locals {
   app_public_routes = [
     "POST /auth/login",
