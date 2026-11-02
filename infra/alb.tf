@@ -99,9 +99,9 @@ resource "aws_autoscaling_attachment" "sonarqube" {
 # ALB publico dedicado so ao SonarQube -- o scanner Maven baixa o scanner
 # engine (~60-80MB) do host do Sonar a cada analise, e o limite de payload
 # do API Gateway HTTP API (10MB, fixo, nao configuravel) sempre rejeitaria
-# esse download. Reusa a mesma target group acima (um target group pode
-# atender varios listeners/ALBs) e o mesmo SG "alb" do infra-base, que ja
-# libera 80/443 de 0.0.0.0/0.
+# esse download. Usa o mesmo SG "alb" do infra-base, que ja libera 80/443
+# de 0.0.0.0/0. Target group propria -- a AWS nao deixa a mesma target
+# group ser associada a mais de um load balancer.
 resource "aws_lb" "sonarqube_public" {
   name               = "${var.projectName}-sonar-alb"
   internal           = false
@@ -114,6 +114,28 @@ resource "aws_lb" "sonarqube_public" {
   })
 }
 
+resource "aws_lb_target_group" "sonarqube_public" {
+  name        = "${var.projectName}-sonar-pub-tg"
+  port        = 30900
+  protocol    = "HTTP"
+  vpc_id      = data.aws_vpc.base.id
+  target_type = "instance"
+
+  health_check {
+    path                = "/sonarqube/api/system/status"
+    protocol            = "HTTP"
+    matcher             = "200"
+    interval            = 30
+    timeout             = 5
+    healthy_threshold   = 2
+    unhealthy_threshold = 3
+  }
+
+  tags = merge(var.tags, {
+    Name = "${var.projectName}-sonar-pub-tg"
+  })
+}
+
 resource "aws_lb_listener" "sonarqube_public" {
   load_balancer_arn = aws_lb.sonarqube_public.arn
   port              = 80
@@ -121,8 +143,13 @@ resource "aws_lb_listener" "sonarqube_public" {
 
   default_action {
     type             = "forward"
-    target_group_arn = aws_lb_target_group.sonarqube.arn
+    target_group_arn = aws_lb_target_group.sonarqube_public.arn
   }
+}
+
+resource "aws_autoscaling_attachment" "sonarqube_public" {
+  autoscaling_group_name = data.aws_eks_node_group.node_group.resources[0].autoscaling_groups[0].name
+  lb_target_group_arn    = aws_lb_target_group.sonarqube_public.arn
 }
 
 # Webhook do Mercado Pago (TASK-013) -- mesma mecanica das demais rotas por
