@@ -76,3 +76,34 @@ resource "aws_lambda_permission" "apigw_invoke_auth" {
   principal     = "apigateway.amazonaws.com"
   source_arn    = "${aws_apigatewayv2_api.this.execution_arn}/*"
 }
+
+# Rota publica do SonarQube (TASK-009) -- os runners do GitHub Actions nao
+# tem o JWT da aplicacao, e nao faria sentido exigir: o SonarQube tem a
+# propria autenticacao por token (TASK-010), independente do authorizer
+# deste api-gateway. Mesma integracao ANY /{proxy+} de cima: o roteamento
+# por path acontece na regra do listener do ALB (ver alb.tf), nao aqui.
+locals {
+  sonarqube_routes = [
+    "ANY /sonarqube",
+    "ANY /sonarqube/{proxy+}",
+  ]
+}
+
+resource "aws_apigatewayv2_route" "sonarqube" {
+  for_each = toset(local.sonarqube_routes)
+
+  api_id    = aws_apigatewayv2_api.this.id
+  route_key = each.value
+  target    = "integrations/${aws_apigatewayv2_integration.alb.id}"
+}
+
+# Rota publica do webhook do Mercado Pago (TASK-013) -- quem chama essa URL
+# e o Mercado Pago, de fora, sem o JWT da aplicacao. A autenticidade nao e
+# validada aqui no gateway: o billing-service confere o header
+# x-signature (HMAC) no proprio codigo, por isso fica fora do authorizer
+# igual a rota do SonarQube.
+resource "aws_apigatewayv2_route" "mercadopago_webhook" {
+  api_id    = aws_apigatewayv2_api.this.id
+  route_key = "POST /webhooks/mercadopago"
+  target    = "integrations/${aws_apigatewayv2_integration.alb.id}"
+}
