@@ -96,6 +96,35 @@ resource "aws_autoscaling_attachment" "sonarqube" {
   lb_target_group_arn    = aws_lb_target_group.sonarqube.arn
 }
 
+# ALB publico dedicado so ao SonarQube -- o scanner Maven baixa o scanner
+# engine (~60-80MB) do host do Sonar a cada analise, e o limite de payload
+# do API Gateway HTTP API (10MB, fixo, nao configuravel) sempre rejeitaria
+# esse download. Reusa a mesma target group acima (um target group pode
+# atender varios listeners/ALBs) e o mesmo SG "alb" do infra-base, que ja
+# libera 80/443 de 0.0.0.0/0.
+resource "aws_lb" "sonarqube_public" {
+  name               = "${var.projectName}-sonar-alb"
+  internal           = false
+  load_balancer_type = "application"
+  security_groups    = [data.aws_security_group.alb.id]
+  subnets            = data.aws_subnets.public.ids
+
+  tags = merge(var.tags, {
+    Name = "${var.projectName}-sonar-alb"
+  })
+}
+
+resource "aws_lb_listener" "sonarqube_public" {
+  load_balancer_arn = aws_lb.sonarqube_public.arn
+  port              = 80
+  protocol          = "HTTP"
+
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.sonarqube.arn
+  }
+}
+
 # Webhook do Mercado Pago (TASK-013) -- mesma mecanica das demais rotas por
 # path neste ALB. O billing-service ainda nao existe (scaffold e TASK-032),
 # mas a target group ja fica pronta apontando pro NodePort que o manifesto

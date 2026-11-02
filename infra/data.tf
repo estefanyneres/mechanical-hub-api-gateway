@@ -16,6 +16,17 @@ data "aws_subnets" "private" {
   }
 }
 
+data "aws_subnets" "public" {
+  filter {
+    name   = "vpc-id"
+    values = [data.aws_vpc.base.id]
+  }
+
+  tags = {
+    Tier = "public"
+  }
+}
+
 data "aws_security_group" "alb" {
   filter {
     name   = "tag:Name"

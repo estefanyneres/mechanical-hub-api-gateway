@@ -8,6 +8,11 @@ output "alb_dns_name" {
   value       = aws_lb.internal.dns_name
 }
 
+output "sonarqube_alb_dns_name" {
+  description = "DNS publico do ALB dedicado ao SonarQube (usar em SONAR_HOST_URL)"
+  value       = aws_lb.sonarqube_public.dns_name
+}
+
 output "authorizer_function_name" {
   description = "Nome da funcao Lambda do authorizer"
   value       = aws_lambda_function.authorizer.function_name
