@@ -188,9 +188,12 @@ resource "aws_lb_listener_rule" "billing_webhook" {
     target_group_arn = aws_lb_target_group.billing.arn
   }
 
+  # /budgets/* (aprovar/recusar orcamento) -- rota autenticada, protegida
+  # pelo authorizer JWT do API Gateway via ANY /{proxy+} (ver http_api.tf).
+  # /webhooks/mercadopago continua publica, sem authorizer.
   condition {
     path_pattern {
-      values = ["/webhooks/mercadopago"]
+      values = ["/webhooks/mercadopago", "/budgets/*"]
     }
   }
 }
@@ -254,4 +257,100 @@ resource "aws_lb_listener_rule" "core_service" {
 resource "aws_autoscaling_attachment" "core_service" {
   autoscaling_group_name = data.aws_eks_node_group.node_group.resources[0].autoscaling_groups[0].name
   lb_target_group_arn    = aws_lb_target_group.core_service.arn
+}
+
+# repair-service -- catalogo (servicos/materiais) e tarefas de execucao.
+# Prioridade (25) menor que a do core-service (30) de proposito: sem isso,
+# "/service-orders*" do core-service roubaria o trafego de
+# "/service-orders/*/tasks*" antes dessa regra ser avaliada.
+resource "aws_lb_target_group" "repair_service" {
+  name        = "${var.projectName}-repair-svc-tg"
+  port        = 30082
+  protocol    = "HTTP"
+  vpc_id      = data.aws_vpc.base.id
+  target_type = "instance"
+
+  health_check {
+    path                = "/actuator/health"
+    protocol            = "HTTP"
+    matcher             = "200"
+    interval            = 30
+    timeout             = 5
+    healthy_threshold   = 2
+    unhealthy_threshold = 3
+  }
+
+  tags = merge(var.tags, {
+    Name = "${var.projectName}-repair-svc-tg"
+  })
+}
+
+resource "aws_lb_listener_rule" "repair_service" {
+  listener_arn = aws_lb_listener.http.arn
+  priority     = 25
+
+  action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.repair_service.arn
+  }
+
+  condition {
+    path_pattern {
+      values = [
+        "/materials*",
+        "/services*",
+        "/service-orders/*/tasks*",
+      ]
+    }
+  }
+}
+
+resource "aws_autoscaling_attachment" "repair_service" {
+  autoscaling_group_name = data.aws_eks_node_group.node_group.resources[0].autoscaling_groups[0].name
+  lb_target_group_arn    = aws_lb_target_group.repair_service.arn
+}
+
+# stock-service -- exige token com perfil ADMINISTRATOR (igual era /stock/**
+# no monolito).
+resource "aws_lb_target_group" "stock_service" {
+  name        = "${var.projectName}-stock-svc-tg"
+  port        = 30083
+  protocol    = "HTTP"
+  vpc_id      = data.aws_vpc.base.id
+  target_type = "instance"
+
+  health_check {
+    path                = "/actuator/health"
+    protocol            = "HTTP"
+    matcher             = "200"
+    interval            = 30
+    timeout             = 5
+    healthy_threshold   = 2
+    unhealthy_threshold = 3
+  }
+
+  tags = merge(var.tags, {
+    Name = "${var.projectName}-stock-svc-tg"
+  })
+}
+
+resource "aws_lb_listener_rule" "stock_service" {
+  listener_arn = aws_lb_listener.http.arn
+  priority     = 26
+
+  action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.stock_service.arn
+  }
+
+  condition {
+    path_pattern {
+      values = ["/stock*"]
+    }
+  }
+}
+
+resource "aws_autoscaling_attachment" "stock_service" {
+  autoscaling_group_name = data.aws_eks_node_group.node_group.resources[0].autoscaling_groups[0].name
+  lb_target_group_arn    = aws_lb_target_group.stock_service.arn
 }
