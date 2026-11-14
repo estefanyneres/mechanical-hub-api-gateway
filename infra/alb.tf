@@ -10,28 +10,6 @@ resource "aws_lb" "internal" {
   })
 }
 
-resource "aws_lb_target_group" "app" {
-  name        = "${var.projectName}-app-tg"
-  port        = 30080
-  protocol    = "HTTP"
-  vpc_id      = data.aws_vpc.base.id
-  target_type = "instance"
-
-  health_check {
-    path                = "/actuator/health"
-    protocol            = "HTTP"
-    matcher             = "200"
-    interval            = 30
-    timeout             = 5
-    healthy_threshold   = 2
-    unhealthy_threshold = 3
-  }
-
-  tags = merge(var.tags, {
-    Name = "${var.projectName}-app-tg"
-  })
-}
-
 resource "aws_lb_listener" "http" {
   load_balancer_arn = aws_lb.internal.arn
   port              = 80
@@ -39,13 +17,8 @@ resource "aws_lb_listener" "http" {
 
   default_action {
     type             = "forward"
-    target_group_arn = aws_lb_target_group.app.arn
+    target_group_arn = aws_lb_target_group.core_service.arn
   }
-}
-
-resource "aws_autoscaling_attachment" "node_group" {
-  autoscaling_group_name = data.aws_eks_node_group.node_group.resources[0].autoscaling_groups[0].name
-  lb_target_group_arn    = aws_lb_target_group.app.arn
 }
 
 # SonarQube (TASK-009): mesmo ALB interno, nova target group apontando pro
@@ -204,9 +177,8 @@ resource "aws_autoscaling_attachment" "billing" {
 }
 
 # core-service (TASK-017) -- substitui o monolito nesses paths (clientes,
-# veiculos, ordens de servico, login de funcionario). O monolito fica
-# obsoleto conforme a migracao avanca, por isso a regra de listener tem
-# prioridade sobre o default (que ainda aponta pro app-tg do monolito).
+# veiculos, ordens de servico, login de funcionario). Tambem e o default
+# action do listener HTTP (ver aws_lb_listener.http acima).
 resource "aws_lb_target_group" "core_service" {
   name        = "${var.projectName}-core-svc-tg"
   port        = 30081
