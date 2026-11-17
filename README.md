@@ -117,35 +117,3 @@ isso continua sendo responsabilidade do Spring Security dentro da aplicação
   Instala as dependências Python do authorizer, lê `infra/pipeline.conf` e aplica
   ou destrói o Terraform conforme `DESTROY`, passando `aws_account_id` e
   `jwt_secret` via `-var`.
-
-## Estrutura
-
-```
-mechanical-hub-api-gateway/
-├── .github/workflows/
-│   ├── pipeline-infra-feature.yml
-│   └── pipeline-infra-main.yml
-├── docs/
-│   └── desenhos/
-│       ├── mechanical-hub-infraestrutura-fase-03.jpg
-│       ├── mechanical-hub-infraestrutura-fase-04.jpg
-│       ├── mechanical-hub-apply-destroy-repos-fase-03.jpg
-│       ├── mechanical-hub-apply-destroy-repos-fase-04.png
-│       └── sequencia-auth-abertura-os-fase-03.png
-├── infra/
-│   ├── providers.tf
-│   ├── variables.tf
-│   ├── data.tf
-│   ├── http_api.tf
-│   ├── alb.tf
-│   ├── vpc_link.tf
-│   ├── authorizer.tf
-│   ├── outputs.tf
-│   └── pipeline.conf
-├── src/
-│   ├── authorizer.py
-│   └── requirements.txt
-├── .gitignore
-└── README.md
-```
-
