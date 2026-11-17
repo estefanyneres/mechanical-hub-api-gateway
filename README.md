@@ -37,7 +37,7 @@ node group, para o `aws_autoscaling_attachment` do target group) e `auth-lambda`
 infra-k8s → infra-database → auth-lambda → **api-gateway** → `mechanical-hub`
 (app). Para derrubar, é o **primeiro** a sair.
 
-![Ordem de apply e destroy entre os repositórios](docs/desenhos/mechanical-hub-apply-destroy-repos-fase-03.jpg)
+![Ordem de apply e destroy entre os repositórios](docs/desenhos/mechanical-hub-apply-destroy-repos-fase-04.png)
 
 1. Configurar no repositório os secrets `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`,
    `AWS_SESSION_TOKEN`, `AWS_ACCOUNT_ID` e `JWT_SECRET` (mesmo valor do repo
@@ -129,6 +129,7 @@ mechanical-hub-api-gateway/
 │   └── desenhos/
 │       ├── mechanical-hub-infraestrutura-fase-03.jpg
 │       ├── mechanical-hub-apply-destroy-repos-fase-03.jpg
+│       ├── mechanical-hub-apply-destroy-repos-fase-04.png
 │       └── sequencia-auth-abertura-os-fase-03.png
 ├── infra/
 │   ├── providers.tf
