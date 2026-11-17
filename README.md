@@ -15,7 +15,7 @@ liga os dois, e a Lambda Authorizer que valida o JWT nas rotas protegidas.
 
 ## Diagrama de arquitetura
 
-![Infraestrutura AWS - Fase 3](docs/desenhos/mechanical-hub-infraestrutura-fase-03.jpg)
+![Infraestrutura AWS - Fase 3](docs/desenhos/mechanical-hub-infraestrutura-fase-04.jpg)
 
 ### Autenticação e abertura de Ordem de Serviço
 
@@ -128,6 +128,7 @@ mechanical-hub-api-gateway/
 ├── docs/
 │   └── desenhos/
 │       ├── mechanical-hub-infraestrutura-fase-03.jpg
+│       ├── mechanical-hub-infraestrutura-fase-04.jpg
 │       ├── mechanical-hub-apply-destroy-repos-fase-03.jpg
 │       ├── mechanical-hub-apply-destroy-repos-fase-04.png
 │       └── sequencia-auth-abertura-os-fase-03.png
