@@ -106,6 +106,10 @@ isso continua sendo responsabilidade do Spring Security dentro da aplicação
 |-----------------------------|-------------------------------------------|
 | `api_endpoint`              | URL pública do HTTP API                  |
 | `alb_dns_name`              | DNS interno do ALB                       |
+| `sonarqube_alb_dns_name`    | DNS público do ALB dedicado ao SonarQube |
+| `repair_service_swagger_url`  | URL pública do Swagger UI do repair-service |
+| `billing_service_swagger_url` | URL pública do Swagger UI do billing-service |
+| `stock_service_swagger_url`   | URL pública do Swagger UI do stock-service |
 | `authorizer_function_name`  | Nome da função Lambda do authorizer      |
 
 ## Pipelines
