@@ -13,6 +13,21 @@ output "sonarqube_alb_dns_name" {
   value       = aws_lb.sonarqube_public.dns_name
 }
 
+output "repair_service_swagger_url" {
+  description = "URL publica do Swagger UI do repair-service"
+  value       = "http://${aws_lb.repair_service_public.dns_name}/swagger-ui/index.html"
+}
+
+output "billing_service_swagger_url" {
+  description = "URL publica do Swagger UI do billing-service"
+  value       = "http://${aws_lb.billing_public.dns_name}/swagger-ui/index.html"
+}
+
+output "stock_service_swagger_url" {
+  description = "URL publica do Swagger UI do stock-service"
+  value       = "http://${aws_lb.stock_service_public.dns_name}/swagger-ui/index.html"
+}
+
 output "authorizer_function_name" {
   description = "Nome da funcao Lambda do authorizer"
   value       = aws_lambda_function.authorizer.function_name

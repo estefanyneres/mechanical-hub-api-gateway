@@ -326,3 +326,163 @@ resource "aws_autoscaling_attachment" "stock_service" {
   autoscaling_group_name = data.aws_eks_node_group.node_group.resources[0].autoscaling_groups[0].name
   lb_target_group_arn    = aws_lb_target_group.stock_service.arn
 }
+
+# ALBs publicos dedicados ao Swagger de cada microsservico -- os 4 servem
+# Swagger UI/OpenAPI no mesmo path (/swagger-ui/index.html, /v3/api-docs),
+# entao o ALB/API Gateway compartilhado nao consegue rotear por path pra
+# decidir qual dos 4 target groups usar (so o core-service e alcancavel,
+# por ser o default_action do listener HTTP interno). Mesma solucao ja
+# usada pro SonarQube: um ALB publico, com target group propria (a AWS nao
+# deixa a mesma target group ser associada a mais de um load balancer),
+# sem nenhuma regra de path -- cada um so tem um servico atras, entao o
+# default_action basta.
+
+resource "aws_lb" "repair_service_public" {
+  name               = "${var.projectName}-repair-alb"
+  internal           = false
+  load_balancer_type = "application"
+  security_groups    = [data.aws_security_group.alb.id]
+  subnets            = data.aws_subnets.public.ids
+
+  tags = merge(var.tags, {
+    Name = "${var.projectName}-repair-alb"
+  })
+}
+
+resource "aws_lb_target_group" "repair_service_public" {
+  name        = "${var.projectName}-repair-pub-tg"
+  port        = 30082
+  protocol    = "HTTP"
+  vpc_id      = data.aws_vpc.base.id
+  target_type = "instance"
+
+  health_check {
+    path                = "/actuator/health"
+    protocol            = "HTTP"
+    matcher             = "200"
+    interval            = 30
+    timeout             = 5
+    healthy_threshold   = 2
+    unhealthy_threshold = 3
+  }
+
+  tags = merge(var.tags, {
+    Name = "${var.projectName}-repair-pub-tg"
+  })
+}
+
+resource "aws_lb_listener" "repair_service_public" {
+  load_balancer_arn = aws_lb.repair_service_public.arn
+  port              = 80
+  protocol          = "HTTP"
+
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.repair_service_public.arn
+  }
+}
+
+resource "aws_autoscaling_attachment" "repair_service_public" {
+  autoscaling_group_name = data.aws_eks_node_group.node_group.resources[0].autoscaling_groups[0].name
+  lb_target_group_arn    = aws_lb_target_group.repair_service_public.arn
+}
+
+resource "aws_lb" "billing_public" {
+  name               = "${var.projectName}-billing-alb"
+  internal           = false
+  load_balancer_type = "application"
+  security_groups    = [data.aws_security_group.alb.id]
+  subnets            = data.aws_subnets.public.ids
+
+  tags = merge(var.tags, {
+    Name = "${var.projectName}-billing-alb"
+  })
+}
+
+resource "aws_lb_target_group" "billing_public" {
+  name        = "${var.projectName}-billing-pub-tg"
+  port        = 30084
+  protocol    = "HTTP"
+  vpc_id      = data.aws_vpc.base.id
+  target_type = "instance"
+
+  health_check {
+    path                = "/actuator/health"
+    protocol            = "HTTP"
+    matcher             = "200"
+    interval            = 30
+    timeout             = 5
+    healthy_threshold   = 2
+    unhealthy_threshold = 3
+  }
+
+  tags = merge(var.tags, {
+    Name = "${var.projectName}-billing-pub-tg"
+  })
+}
+
+resource "aws_lb_listener" "billing_public" {
+  load_balancer_arn = aws_lb.billing_public.arn
+  port              = 80
+  protocol          = "HTTP"
+
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.billing_public.arn
+  }
+}
+
+resource "aws_autoscaling_attachment" "billing_public" {
+  autoscaling_group_name = data.aws_eks_node_group.node_group.resources[0].autoscaling_groups[0].name
+  lb_target_group_arn    = aws_lb_target_group.billing_public.arn
+}
+
+resource "aws_lb" "stock_service_public" {
+  name               = "${var.projectName}-stock-alb"
+  internal           = false
+  load_balancer_type = "application"
+  security_groups    = [data.aws_security_group.alb.id]
+  subnets            = data.aws_subnets.public.ids
+
+  tags = merge(var.tags, {
+    Name = "${var.projectName}-stock-alb"
+  })
+}
+
+resource "aws_lb_target_group" "stock_service_public" {
+  name        = "${var.projectName}-stock-pub-tg"
+  port        = 30083
+  protocol    = "HTTP"
+  vpc_id      = data.aws_vpc.base.id
+  target_type = "instance"
+
+  health_check {
+    path                = "/actuator/health"
+    protocol            = "HTTP"
+    matcher             = "200"
+    interval            = 30
+    timeout             = 5
+    healthy_threshold   = 2
+    unhealthy_threshold = 3
+  }
+
+  tags = merge(var.tags, {
+    Name = "${var.projectName}-stock-pub-tg"
+  })
+}
+
+resource "aws_lb_listener" "stock_service_public" {
+  load_balancer_arn = aws_lb.stock_service_public.arn
+  port              = 80
+  protocol          = "HTTP"
+
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.stock_service_public.arn
+  }
+}
+
+resource "aws_autoscaling_attachment" "stock_service_public" {
+  autoscaling_group_name = data.aws_eks_node_group.node_group.resources[0].autoscaling_groups[0].name
+  lb_target_group_arn    = aws_lb_target_group.stock_service_public.arn
+}
