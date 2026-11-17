@@ -57,10 +57,10 @@ infra-k8s → infra-database → auth-lambda → **api-gateway** → `mechanical
 
 RFCs e ADRs ficam centralizados no repo da aplicação, para não duplicar/desincronizar entre os 6 repositórios. As diretamente relevantes para este repo:
 
-- [RFC-003 — Estratégia de autenticação: dois fluxos coexistindo (Fase 3)](https://github.com/estefanyneres/mechanical-hub/blob/main/src/docs/fase3/documentacao/rfcs.md)
-- [RFC-004 — Lambda authorizer validando na borda, mantendo Spring Security como defesa em profundidade (Fase 3)](https://github.com/estefanyneres/mechanical-hub/blob/main/src/docs/fase3/documentacao/rfcs.md)
-- [ADR-002 — Descoberta entre repositórios via data source (Fase 3)](https://github.com/estefanyneres/mechanical-hub/blob/main/src/docs/fase3/documentacao/adrs.md)
-- [ADR-004 — ALB criado pelo Terraform, Service como NodePort (Fase 3)](https://github.com/estefanyneres/mechanical-hub/blob/main/src/docs/fase3/documentacao/adrs.md)
+- [RFC-003 — Estratégia de autenticação: dois fluxos coexistindo (Fase 3)](https://github.com/estefanyneres/mechanical-hub-core-service/blob/main/docs/rfcs-fase3.md)
+- [RFC-004 — Lambda authorizer validando na borda, mantendo Spring Security como defesa em profundidade (Fase 3)](https://github.com/estefanyneres/mechanical-hub-core-service/blob/main/docs/rfcs-fase3.md)
+- [ADR-002 — Descoberta entre repositórios via data source (Fase 3)](https://github.com/estefanyneres/mechanical-hub-core-service/blob/main/docs/adrs-fase3.md)
+- [ADR-004 — ALB criado pelo Terraform, Service como NodePort (Fase 3)](https://github.com/estefanyneres/mechanical-hub-core-service/blob/main/docs/adrs-fase3.md)
 - [ADR-001 — Decomposição em 4 microsserviços, por domínio de dados (Fase 4)](https://github.com/estefanyneres/mechanical-hub-core-service/blob/main/docs/adrs.md)
 - [RFC-001 — Saga Pattern orquestrado, embutido no core-service (Fase 4)](https://github.com/estefanyneres/mechanical-hub-core-service/blob/main/docs/rfcs.md)
 
