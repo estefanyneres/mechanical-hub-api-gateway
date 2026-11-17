@@ -1,12 +1,13 @@
 # mechanical-hub-api-gateway
 
 Ponto de entrada público do projeto mechanical-hub: o HTTP API Gateway, o ALB
-interno + target group que encaminha para os nodes do EKS, o VPC Link que liga
-os dois, e a Lambda Authorizer que valida o JWT nas rotas protegidas.
+interno (com uma **target group por microsserviço**, roteada por regra de
+listener baseada em path) que encaminha para os nodes do EKS, o VPC Link que
+liga os dois, e a Lambda Authorizer que valida o JWT nas rotas protegidas.
 
 ## Tecnologias
 
-- **Terraform** (`hashicorp/aws ~> 5.0`) — API Gateway (HTTP API v2), ALB, target group, VPC Link, Lambda Authorizer.
+- **Terraform** (`hashicorp/aws ~> 5.0`) — API Gateway (HTTP API v2), ALB (interno + um público dedicado ao SonarQube), 6 target groups, VPC Link, Lambda Authorizer.
 - **AWS API Gateway (HTTP API)** — roteamento público, autorização via Lambda `REQUEST`.
 - **AWS ALB** — interno, não exposto à internet.
 - **Python 3.12 + PyJWT** — código do Lambda Authorizer.
@@ -56,10 +57,12 @@ infra-k8s → infra-database → auth-lambda → **api-gateway** → `mechanical
 
 RFCs e ADRs ficam centralizados no repo da aplicação, para não duplicar/desincronizar entre os 6 repositórios. As diretamente relevantes para este repo:
 
-- [RFC-003 — Estratégia de autenticação: dois fluxos coexistindo](https://github.com/estefanyneres/mechanical-hub/blob/main/src/docs/fase3/documentacao/rfcs.md)
-- [RFC-004 — Lambda authorizer validando na borda, mantendo Spring Security como defesa em profundidade](https://github.com/estefanyneres/mechanical-hub/blob/main/src/docs/fase3/documentacao/rfcs.md)
-- [ADR-002 — Descoberta entre repositórios via data source](https://github.com/estefanyneres/mechanical-hub/blob/main/src/docs/fase3/documentacao/adrs.md)
-- [ADR-004 — ALB criado pelo Terraform, Service como NodePort](https://github.com/estefanyneres/mechanical-hub/blob/main/src/docs/fase3/documentacao/adrs.md)
+- [RFC-003 — Estratégia de autenticação: dois fluxos coexistindo (Fase 3)](https://github.com/estefanyneres/mechanical-hub/blob/main/src/docs/fase3/documentacao/rfcs.md)
+- [RFC-004 — Lambda authorizer validando na borda, mantendo Spring Security como defesa em profundidade (Fase 3)](https://github.com/estefanyneres/mechanical-hub/blob/main/src/docs/fase3/documentacao/rfcs.md)
+- [ADR-002 — Descoberta entre repositórios via data source (Fase 3)](https://github.com/estefanyneres/mechanical-hub/blob/main/src/docs/fase3/documentacao/adrs.md)
+- [ADR-004 — ALB criado pelo Terraform, Service como NodePort (Fase 3)](https://github.com/estefanyneres/mechanical-hub/blob/main/src/docs/fase3/documentacao/adrs.md)
+- [ADR-001 — Decomposição em 4 microsserviços, por domínio de dados (Fase 4)](https://github.com/estefanyneres/mechanical-hub-core-service/blob/main/docs/adrs.md)
+- [RFC-001 — Saga Pattern orquestrado, embutido no core-service (Fase 4)](https://github.com/estefanyneres/mechanical-hub-core-service/blob/main/docs/rfcs.md)
 
 ## Rotas e o Lambda Authorizer
 
@@ -67,8 +70,29 @@ A rota curinga `ANY /{proxy+}` (todo o resto do tráfego pra aplicação) fica
 protegida pelo authorizer (`authorization_type = "CUSTOM"`), controlável por
 `enable_authorizer` (útil para testar roteamento sem JWT). Ficam **fora** do
 authorizer, deliberadamente: `POST /auth/login`, `GET /actuator/health`,
-Swagger/OpenAPI, e `POST /auth/cpf` (que é integrada direto com a Lambda de
-autenticação, `AWS_PROXY`, não com o ALB).
+Swagger/OpenAPI, `POST /auth/cpf` (que é integrada direto com a Lambda de
+autenticação, `AWS_PROXY`, não com o ALB) e `POST /webhooks/mercadopago`
+(autenticidade validada pelo `x-signature` dentro do billing-service, não aqui).
+
+Dentro do ALB interno, cada microsserviço tem sua própria target group,
+roteada por **regra de listener baseada em path** (prioridade menor = avaliada
+primeiro):
+
+| Prioridade | Path(s) | Target group | Serviço |
+|---|---|---|---|
+| 10 | `/sonarqube*` | `sonar-tg` (NodePort `30900`) | SonarQube (painel, acesso humano) |
+| 20 | `/webhooks/mercadopago`, `/budgets/*` | `billing-tg` (NodePort `30084`) | billing-service |
+| 25 | `/materials*`, `/services*`, `/service-orders/*/tasks*` | `repair-svc-tg` (NodePort `30082`) | repair-service |
+| 26 | `/stock*` | `stock-svc-tg` (NodePort `30083`) | stock-service |
+| 30 (default) | `/auth/login`, `/service-orders*`, `/customers*`, `/vehicles*`, `/mechanical-hub/*` | `core-svc-tg` (NodePort `30081`) | core-service |
+
+A prioridade do repair-service (25) é menor que a do core-service (30) de
+propósito: sem isso, `/service-orders*` do core-service roubaria o tráfego de
+`/service-orders/*/tasks*` antes da regra do repair-service ser avaliada. O
+SonarQube também tem um **ALB público dedicado e separado** (`sonar-alb`,
+fora da VPC Link) — o scanner Maven baixa ~60-80MB por análise, e o limite de
+payload do API Gateway HTTP API (10MB, fixo) sempre rejeitaria esse download;
+a esteira dos microsserviços usa esse ALB público como `SONAR_HOST_URL`.
 
 O authorizer é um `REQUEST` authorizer com `enable_simple_responses = true` — só
 decodifica e valida o JWT (assinatura, emissor, expiração) usando o mesmo
