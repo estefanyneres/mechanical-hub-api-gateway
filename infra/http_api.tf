@@ -42,6 +42,12 @@ locals {
     "POST /auth/login",
     "GET /actuator/health",
     "ANY /swagger-ui/{proxy+}",
+    # springdoc serve o JSON da spec no path exato /v3/api-docs (sem nada
+    # depois da barra) -- "/v3/api-docs/{proxy+}" sozinho nunca bate com
+    # isso (exige pelo menos um segmento a mais), deixando o Swagger UI
+    # cair no proxy curinga protegido pelo authorizer e falhar com 401 ao
+    # tentar carregar a spec. Precisa das duas rotas.
+    "ANY /v3/api-docs",
     "ANY /v3/api-docs/{proxy+}",
   ]
 }
